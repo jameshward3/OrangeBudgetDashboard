@@ -1,0 +1,65 @@
+[
+  {
+    "year": 2020,
+    "source": "2020-Adopted-Budget-81220.pdf, adopted summary sheets 41-42",
+    "totalBudget": 77636060,
+    "taxLevy": 51658519.05,
+    "nonTaxRevenue": 25503023,
+    "surplus": 4700000,
+    "debtService": 2241939
+  },
+  {
+    "year": 2021,
+    "source": "2021-Adopted-Budget-8421.pdf, adopted summary sheets 41-42",
+    "totalBudget": 79358417,
+    "taxLevy": 54801504.5,
+    "nonTaxRevenue": 24086710,
+    "surplus": 3700000,
+    "debtService": 2981982
+  },
+  {
+    "year": 2022,
+    "source": "2022-Adopted-Budget-7622.pdf, adopted summary sheets 41-42",
+    "totalBudget": 81720157.29,
+    "taxLevy": 56756859.3,
+    "nonTaxRevenue": 24431644.29,
+    "surplus": 3700000,
+    "debtService": 3474731
+  },
+  {
+    "year": 2023,
+    "source": "2023-Adopted-Budget.pdf, adopted summary sheets 41-42",
+    "totalBudget": 88844923.41,
+    "taxLevy": 60801150.04,
+    "nonTaxRevenue": 27352735.41,
+    "surplus": 3000000,
+    "debtService": 3352875
+  },
+  {
+    "year": 2024,
+    "source": "2024-Adopted-Budget-872024.pdf, adopted summary sheets 41-42",
+    "totalBudget": 93280851,
+    "taxLevy": 64977993,
+    "nonTaxRevenue": 27550421,
+    "surplus": 4680000,
+    "debtService": 4236363
+  },
+  {
+    "year": 2025,
+    "source": "Existing Orange Budget Dashboard analysis package",
+    "totalBudget": 92330788,
+    "taxLevy": 66890251,
+    "nonTaxRevenue": 23543038,
+    "surplus": 4000000,
+    "debtService": 4797620
+  },
+  {
+    "year": 2026,
+    "source": "Existing Orange Budget Dashboard analysis package",
+    "totalBudget": 94580788,
+    "taxLevy": 70104881,
+    "nonTaxRevenue": 30901905,
+    "surplus": 4008400,
+    "debtService": 4306684
+  }
+]

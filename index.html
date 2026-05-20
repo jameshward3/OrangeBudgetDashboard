@@ -1,0 +1,784 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>City of Orange Municipal Budget Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.9/dist/chart.umd.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+  <style>
+    :root {
+      --bg: #f5f7fa;
+      --panel: #ffffff;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --line: #dbe3ee;
+      --slate: #1e293b;
+      --blue: #005fa3;
+      --orange: #f97316;
+      --green: #16a34a;
+      --red: #dc2626;
+      --yellow: #ca8a04;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    header {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: white;
+    }
+
+    .wrap { max-width: 1240px; margin: 0 auto; padding: 0 24px; }
+    .hero { padding: 34px 0 30px; display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
+    .hero h1 { margin: 0 0 8px; font-size: clamp(2.35rem, 5vw, 4rem); line-height: .95; letter-spacing: 0; }
+    .hero p { margin: 0; color: #cbd5e1; font-size: 1.1rem; }
+    .hero-meta { text-align: right; color: #cbd5e1; font-size: .95rem; }
+    .hero-meta strong { color: #fb923c; display: block; margin-top: 6px; }
+    .orange-rule { width: 128px; height: 4px; background: linear-gradient(90deg, #f97316, #fb923c); border-radius: 999px; margin-top: 18px; }
+
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(255,255,255,.96);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(10px);
+    }
+
+    .tabs { display: flex; gap: 22px; overflow-x: auto; }
+    .tab {
+      appearance: none;
+      border: 0;
+      background: transparent;
+      color: #475569;
+      border-bottom: 2px solid transparent;
+      padding: 16px 2px 14px;
+      font-size: .9rem;
+      font-weight: 750;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: color .18s ease, border-color .18s ease, transform .18s ease;
+    }
+    .tab:hover { color: #0f172a; transform: translateY(-1px); }
+    .tab.active { color: #ea580c; border-bottom-color: #f97316; }
+    .calc-button {
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 8px;
+      padding: 11px;
+      font-weight: 800;
+      color: #334155;
+      cursor: pointer;
+      transition: transform .18s ease, border-color .18s ease;
+    }
+    .calc-button:hover { transform: translateY(-1px); border-color: #fb923c; }
+
+    main { padding: 30px 0 56px; }
+    section[hidden] { display: none; }
+    .stack { display: grid; gap: 24px; animation: fadeUp .28s ease both; }
+    .grid { display: grid; gap: 20px; }
+    .metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .two { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .cards { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+
+    .panel, .metric, .project, .variance {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: 0 8px 22px rgba(15,23,42,.05);
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+    .panel { padding: 22px; }
+    .metric { padding: 22px; }
+    .project, .variance { padding: 20px; }
+    .panel:hover, .metric:hover, .project:hover, .variance:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(15,23,42,.08); }
+
+    .metric-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .label { color: var(--muted); font-size: .75rem; font-weight: 850; text-transform: uppercase; letter-spacing: .045em; }
+    .value { font-size: clamp(1.55rem, 3vw, 2.15rem); font-weight: 850; margin: 12px 0 4px; }
+    .note { color: var(--muted); font-size: .86rem; line-height: 1.45; }
+    .yoy { border-top: 1px solid var(--line); margin-top: 16px; padding-top: 12px; font-size: .88rem; font-weight: 800; }
+    .orange { color: var(--orange); }
+    .blue { color: var(--blue); }
+    .green { color: var(--green); }
+    .red { color: var(--red); }
+    .yellow { color: var(--yellow); }
+    .muted { color: var(--muted); }
+
+    h2 { margin: 0 0 18px; font-size: 1.35rem; }
+    h3 { margin: 0 0 10px; font-size: 1.05rem; }
+    h4 { margin: 0 0 8px; }
+    p { margin: 0; }
+    .panel-title { display: flex; align-items: center; gap: 10px; }
+    .alert {
+      border-left: 4px solid;
+      padding: 18px 20px;
+      border-radius: 0 8px 8px 0;
+    }
+    .alert.blue { background: #eff6ff; border-color: #2563eb; color: #1e3a8a; }
+    .alert.yellow { background: #fefce8; border-color: #eab308; color: #713f12; }
+    .alert.red { background: #fef2f2; border-color: #ef4444; color: #7f1d1d; }
+    .alert.green { background: #f0fdf4; border-color: #22c55e; color: #14532d; }
+
+    table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+    th, td { padding: 12px 10px; border-bottom: 1px solid var(--line); text-align: right; vertical-align: top; }
+    th:first-child, td:first-child { text-align: left; }
+    th { color: var(--muted); font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; background: #f8fafc; }
+    tr:last-child td { border-bottom: 0; }
+
+    .badge { display: inline-flex; align-items: center; border-radius: 999px; padding: 5px 10px; font-size: .76rem; font-weight: 850; }
+    .badge.green { background: #dcfce7; color: #166534; }
+    .badge.blue { background: #dbeafe; color: #1e40af; }
+    .badge.orange { background: #ffedd5; color: #9a3412; }
+    .badge.red { background: #fee2e2; color: #991b1b; }
+    .badge.yellow { background: #fef3c7; color: #92400e; }
+
+    .bar-track { height: 8px; background: #e2e8f0; border-radius: 999px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #005fa3, #f97316); transform-origin: left; animation: growBar .8s ease both; }
+    .kv { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+    .kv div { background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; padding: 12px; }
+    .chart-box { height: 360px; }
+    .chart-box.tall { height: 430px; }
+    canvas { width: 100% !important; height: 100% !important; }
+    .icon { width: 22px; height: 22px; }
+    .icon.orange { color: var(--orange); }
+    .icon.blue { color: var(--blue); }
+    .icon.green { color: var(--green); }
+    .icon.red { color: var(--red); }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes growBar {
+      from { transform: scaleX(0); }
+      to { transform: scaleX(1); }
+    }
+
+    @media (max-width: 980px) {
+      .hero { display: block; }
+      .hero-meta { text-align: left; margin-top: 18px; }
+      .metrics, .two, .three { grid-template-columns: 1fr; }
+      .tabs { gap: 16px; }
+      .kv { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap hero">
+      <div>
+        <h1>City of Orange</h1>
+        <p>Municipal Budget Dashboard 2026</p>
+        <div class="orange-rule"></div>
+      </div>
+      <div class="hero-meta">
+        Essex County, New Jersey
+        <strong>Fiscal Year: 2026</strong>
+      </div>
+    </div>
+  </header>
+
+  <nav>
+    <div class="wrap tabs" role="tablist" aria-label="Budget dashboard sections">
+      <button class="tab active" data-tab="overview">Overview</button>
+      <button class="tab" data-tab="delta">2025 vs 2026 Delta</button>
+      <button class="tab" data-tab="taxImpact">Your Property Tax Impact</button>
+      <button class="tab" data-tab="pilot">PILOT Program</button>
+      <button class="tab" data-tab="capital">Capital Projects</button>
+      <button class="tab" data-tab="spending">Spending Analysis</button>
+      <button class="tab" data-tab="forecast">6-Year Forecast</button>
+      <button class="tab" data-tab="changes">Change Orders</button>
+    </div>
+  </nav>
+
+  <main class="wrap">
+    <section class="stack" data-section="overview"></section>
+    <section class="stack" data-section="delta" hidden></section>
+    <section class="stack" data-section="taxImpact" hidden></section>
+    <section class="stack" data-section="pilot" hidden></section>
+    <section class="stack" data-section="capital" hidden></section>
+    <section class="stack" data-section="spending" hidden></section>
+    <section class="stack" data-section="forecast" hidden></section>
+    <section class="stack" data-section="changes" hidden></section>
+  </main>
+
+  <script>
+    const money = value => new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0
+    }).format(value);
+
+    const pct = value => `${value > 0 ? '+' : ''}${value.toFixed(2)}%`;
+    const shortMoney = value => `$${(value / 1000000).toFixed(value >= 10000000 ? 1 : 2)}M`;
+
+    const historicalTrend = [
+      { year: 2020, total: 77636060, taxLevy: 51658519.05, nonTaxRevenue: 25503023, surplus: 4700000, debtService: 2241939 },
+      { year: 2021, total: 79358417, taxLevy: 54801504.5, nonTaxRevenue: 24086710, surplus: 3700000, debtService: 2981982 },
+      { year: 2022, total: 81720157.29, taxLevy: 56756859.3, nonTaxRevenue: 24431644.29, surplus: 3700000, debtService: 3474731 },
+      { year: 2023, total: 88844923.41, taxLevy: 60801150.04, nonTaxRevenue: 27352735.41, surplus: 3000000, debtService: 3352875 },
+      { year: 2024, total: 93280851, taxLevy: 64977993, nonTaxRevenue: 27550421, surplus: 4680000, debtService: 4236363 },
+      { year: 2025, total: 92330788, taxLevy: 66890251, nonTaxRevenue: 23543038, surplus: 4000000, debtService: 4797620 },
+      { year: 2026, total: 94580788, taxLevy: 70104881, nonTaxRevenue: 30901905, surplus: 4008400, debtService: 4306684 }
+    ];
+
+    const budgetComparison = [
+      { category: 'Total Appropriations', y2025: 92330788, y2026: 94580788 },
+      { category: 'Operations - Within CAP', y2025: 66272899, y2026: 64526480 },
+      { category: 'Operations - Excluded CAP', y2025: 5876516, y2026: 11202060 },
+      { category: 'Capital Improvements', y2025: 1500000, y2026: 1600000 },
+      { category: 'Debt Service', y2025: 4797620, y2026: 4306684 }
+    ].map(row => ({ ...row, change: row.y2026 - row.y2025, percent: ((row.y2026 - row.y2025) / row.y2025) * 100 }));
+
+    const departmentComparison = [
+      { name: 'Police', y2025: 17917872, y2026: 17246707 },
+      { name: 'Fire', y2025: 9085400, y2026: 10043081 },
+      { name: 'Public Works', y2025: 7912622, y2026: 7759162 },
+      { name: 'Insurance', y2025: 22572000, y2026: 23857280 },
+      { name: 'Finance', y2025: 2505000, y2026: 2400000 },
+      { name: 'Library', y2025: 985343, y2026: 1117869 }
+    ].map(row => ({ ...row, change: row.y2026 - row.y2025, percent: ((row.y2026 - row.y2025) / row.y2025) * 100 }));
+
+    const revenueComparison = [
+      { source: 'Surplus', y2025: 4000000, y2026: 4008400 },
+      { source: 'Local Revenues', y2025: 2722147, y2026: 2651500 },
+      { source: 'State Aid', y2025: 8472638, y2026: 8472638 },
+      { source: 'UCC Fees', y2025: 940000, y2026: 1100000 },
+      { source: 'PILOTs', y2025: 2664627, y2026: 2788300 },
+      { source: 'Grants/Special', y2025: 150000, y2026: 6946352 }
+    ].map(row => ({ ...row, change: row.y2026 - row.y2025, percent: row.y2025 ? ((row.y2026 - row.y2025) / row.y2025) * 100 : 0 }));
+
+    const taxImpactAssumptions = {
+      balconyUrl: 'https://app.balcony.technology/municipality/NJ-0717',
+      municipalLevy2025: 66890251,
+      municipalLevy2026: 70104881,
+      generalTaxRate2025: 4.03,
+      effectiveTaxRate2025: 3.765,
+      estimatedTotalLevy2025: 89654326,
+    };
+    taxImpactAssumptions.estimatedTaxableBase = taxImpactAssumptions.estimatedTotalLevy2025 / (taxImpactAssumptions.generalTaxRate2025 / 100);
+    taxImpactAssumptions.municipalRate2025 = taxImpactAssumptions.municipalLevy2025 / taxImpactAssumptions.estimatedTaxableBase * 100;
+    taxImpactAssumptions.municipalRate2026 = taxImpactAssumptions.municipalLevy2026 / taxImpactAssumptions.estimatedTaxableBase * 100;
+    taxImpactAssumptions.municipalRateChange = taxImpactAssumptions.municipalRate2026 - taxImpactAssumptions.municipalRate2025;
+    taxImpactAssumptions.projectedGeneralTaxRate2026 = taxImpactAssumptions.generalTaxRate2025 + taxImpactAssumptions.municipalRateChange;
+    taxImpactAssumptions.equalizationRatio = taxImpactAssumptions.effectiveTaxRate2025 / taxImpactAssumptions.generalTaxRate2025;
+    taxImpactAssumptions.projectedEffectiveTaxRate2026 = taxImpactAssumptions.projectedGeneralTaxRate2026 * taxImpactAssumptions.equalizationRatio;
+
+    const keyVariances = [
+      { item: 'Workers Compensation Insurance', y2025: 1000000, y2026: 1500000, severity: 'red', note: 'Significant increase requiring investigation into claims experience vs. rate changes.' },
+      { item: 'Court Fines', y2025: 1201676, y2026: 938800, severity: 'yellow', note: 'Lower anticipated fines reduce recurring local revenue.' },
+      { item: 'Fire Department', y2025: 9085400, y2026: 10043081, severity: 'yellow', note: 'Increase reflects salary and benefits pressure.' },
+      { item: 'Permit Fees', y2025: 439257, y2026: 553000, severity: 'green', note: 'Permit activity indicates stronger development activity.' },
+      { item: 'Snow Removal Budget', y2025: 205000, y2026: 320000, severity: 'yellow', note: 'Higher budget improves winter weather preparedness.' },
+      { item: 'Grant Revenues', y2025: 150000, y2026: 6946352, severity: 'green', note: 'Major state and federal grant acquisition success.' }
+    ].map(row => ({ ...row, change: row.y2026 - row.y2025, percent: ((row.y2026 - row.y2025) / row.y2025) * 100 }));
+
+    const pilotProperties = [
+      ['Washington Dodd', 493727, 443700, 'Senior Housing'],
+      ['Oakwood Towers', 274225, 243300, 'Senior Housing'],
+      ['Our Lady of Mt. Carmel', 204354, 178300, 'Senior Housing'],
+      ['Condos @ 52 Lincoln Ave', 153010, 138500, 'Mixed-Use'],
+      ['Washington Dodd Settlement', 815000, 0, 'One-Time Settlement'],
+      ['L & M Development Partners', 143668, 66600, 'Commercial'],
+      ['Station Partners - Tony Galento', 250249, 21200, 'Mixed-Use'],
+      ['Salem Towers', 175000, 175000, 'Senior Housing'],
+      ['Transport of NJ', 107019, 107000, 'Commercial'],
+      ['Orange Park Apartments', 237177, 200000, 'Residential'],
+      ['S. Essex Urban Renewal', 99838, 90100, 'Urban Renewal'],
+      ['Walter G Phase I', 58661, 62700, 'Mixed-Use'],
+      ['Walter G Phase II', 38687, 35900, 'Mixed-Use'],
+      ['Walter G Phase III', 34623, 33600, 'Mixed-Use'],
+      ['Grand Central Senior Housing', 38496, 38400, 'Senior Housing'],
+      ['Living Fountain', 73102, 65700, 'Mixed-Use'],
+      ['Harvard Printing Development', 41871, 58200, 'Commercial'],
+      ['606 Freeman Street', 115864, 127500, 'Commercial'],
+      ['Essex & Crane', 59915, 69300, 'Commercial'],
+      ['Peek Reock I', 33582, 33000, 'Commercial'],
+      ['New Community Corp', 71910, 52500, 'Anchor Institution'],
+      ['205 Mt. Vernon', 44529, 28900, 'Residential'],
+      ['Condos @ 475 S. Jefferson', 77519, 84500, 'Commercial'],
+      ['The Berkley, South Center', 27772, 35500, 'Anchor Institution'],
+      ['307 Washington Street', 76956, 0, 'Phase-Out'],
+      ['Peek Reock II', 75737, 0, 'Phase-Out'],
+      ['Peek Reock III', 21008, 0, 'Phase-Out'],
+      ['D&A Urban Renewal II - LIA', 39062, 0, 'Phase-Out']
+    ].map(([name, y2025, y2026, type]) => {
+      const percent = y2025 ? ((y2026 - y2025) / y2025) * 100 : 0;
+      const status = y2026 === 0 && y2025 > 0 ? 'Discontinued' : percent > 1 ? 'Growing' : percent < -2 ? 'Declining' : 'Stable';
+      return { name, y2025, y2026, type, change: y2026 - y2025, percent, status };
+    });
+
+    const capitalProjects = [
+      { name: 'Road Improvements', category: 'Infrastructure', total: 5000000, budget2026: 250000, status: 'Active', years: 6, description: 'Multi-year street resurfacing and infrastructure upgrades across the city.' },
+      { name: 'Water/Sewer System Improvements', category: 'Utilities', total: 6900000, budget2026: 5400000, status: 'Priority', years: 6, description: 'Comprehensive water and sewer infrastructure modernization.' },
+      { name: 'DPW Projects - OPD/Courts', category: 'Municipal Facilities', total: 2667000, budget2026: 133350, status: 'Active', years: 1, description: 'Police Department and Courts building improvements.' },
+      { name: 'Fire Department Radios', category: 'Equipment', total: 300000, budget2026: 15000, status: 'Active', years: 1, description: 'Communications equipment upgrade for fire operations.' },
+      { name: 'DPW Projects - City Hall', category: 'Municipal Facilities', total: 410000, budget2026: 20500, status: 'Planning', years: 1, description: 'City Hall facility upgrades and maintenance.' }
+    ];
+
+    const sixYearProjection = [
+      { year: '2026', general: 4327000, waterSewer: 5400000, total: 9727000 },
+      { year: '2027', general: 1000000, waterSewer: 300000, total: 1300000 },
+      { year: '2028', general: 1000000, waterSewer: 300000, total: 1300000 },
+      { year: '2029', general: 1000000, waterSewer: 300000, total: 1300000 },
+      { year: '2030', general: 1000000, waterSewer: 300000, total: 1300000 },
+      { year: '2031', general: 1000000, waterSewer: 300000, total: 1300000 }
+    ];
+
+    const departmentSpending = [
+      { name: 'Police', amount: 17967872, percentage: 22.8 },
+      { name: 'Fire', amount: 10038481, percentage: 12.8 },
+      { name: 'Insurance', amount: 23857280, percentage: 30.4 },
+      { name: 'Public Works', amount: 8202122, percentage: 10.4 },
+      { name: 'Administration', amount: 5834562, percentage: 7.4 },
+      { name: 'Other Services', amount: 6484935, percentage: 8.2 }
+    ];
+
+    const revenueSources = [
+      { name: 'Property Tax', value: 70104881, color: '#003d7a' },
+      { name: 'State Aid', value: 8472638, color: '#005fa3' },
+      { name: 'Miscellaneous', value: 11968449, color: '#f97316' },
+      { name: 'Surplus', value: 4008400, color: '#fb923c' },
+      { name: 'Grants/Other', value: 26400, color: '#fdba74' }
+    ];
+
+    const changeOrders = [
+      { project: 'NJDOT 2020 Roadway Improvements', contractor: 'Cifelli & Son General Construction', original: 518882.39, increase: 112731.92, percentage: 21.7, scope: 'Additional concrete sidewalk, milling, paving on North Day, Hillyer, Hickory Streets, plus traffic directors.' },
+      { project: 'Public Works Garage Roof Removal & Replacement', contractor: 'Weatherproof Technologies, Inc.', original: 370747.83, increase: 75781.45, percentage: 20.4, scope: 'HVAC, ladder installation, new door, NJ Transit training, metal deck replacement, and split unit.' },
+      { project: '2022 Safe Streets to Transit', contractor: 'Portofino Builders, LLC', original: 229535, increase: 113319.6, percentage: 49.4, scope: 'Additional conduit, PSE&G hand hole, drainage changes, intersection paving, curb installation, tree removal and replacement.' }
+    ];
+
+    const sections = Object.fromEntries([...document.querySelectorAll('[data-section]')].map(el => [el.dataset.section, el]));
+
+    const icon = (name, cls = 'icon orange') => `<i data-lucide="${name}" class="${cls}"></i>`;
+    const metric = ({ label, value, note, yoy, iconName, color = 'orange' }) => `
+      <article class="metric">
+        <div class="metric-top">
+          <span class="label">${label}</span>
+          ${icon(iconName, `icon ${color}`)}
+        </div>
+        <div class="value">${value}</div>
+        <p class="note">${note}</p>
+        <div class="yoy ${color}">${yoy}</div>
+      </article>
+    `;
+
+    const table = (headers, rows) => `
+      <table>
+        <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+        <tbody>${rows.join('')}</tbody>
+      </table>
+    `;
+
+    const signed = row => `<span class="${row.change >= 0 ? 'orange' : 'blue'}">${row.change >= 0 ? '+' : ''}${money(row.change)} (${pct(row.percent)})</span>`;
+
+    sections.overview.innerHTML = `
+      <div class="grid metrics">
+        ${metric({ label: 'Total Appropriations', value: money(94580788), note: '2026 Municipal Budget', yoy: `+${money(2250000)} (+2.44%) from 2025`, iconName: 'dollar-sign' })}
+        ${metric({ label: 'Tax Levy', value: money(70104881), note: 'Amount to be raised by property tax', yoy: `+${money(3214630)} (+4.81%) from 2025`, iconName: 'trending-up', color: 'blue' })}
+        ${metric({ label: 'Miscellaneous Revenue', value: money(19400638), note: 'Licenses, fees, state aid, grants', yoy: `+${money(7350467)} (+37.88%) from 2025`, iconName: 'building-2', color: 'green' })}
+        ${metric({ label: 'Surplus Balance', value: money(4008400), note: 'Anticipated surplus for 2026', yoy: `+${money(8400)} (+0.21%) from 2025`, iconName: 'alert-circle', color: 'yellow' })}
+      </div>
+      <div class="grid two">
+        <div class="panel">
+          <h2 class="panel-title">${icon('pie-chart', 'icon orange')} Revenue Sources</h2>
+          <div class="chart-box"><canvas id="revenuePie"></canvas></div>
+        </div>
+        <div class="panel">
+          <h2 class="panel-title">${icon('bar-chart-3', 'icon blue')} Top Department Allocations</h2>
+          ${departmentSpending.map(d => `
+            <div style="margin-bottom:16px">
+              <div style="display:flex;justify-content:space-between;margin-bottom:7px;font-size:.92rem">
+                <strong>${d.name}</strong><strong>${money(d.amount)}</strong>
+              </div>
+              <div class="bar-track"><div class="bar-fill" style="width:${d.percentage}%"></div></div>
+              <p class="note">${d.percentage}% of municipal spending</p>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      <div class="panel">
+        <h2 class="panel-title">${icon('activity', 'icon green')} Long-Term Budget Trend</h2>
+        <div class="chart-box tall"><canvas id="historicalTrend"></canvas></div>
+      </div>
+    `;
+
+    sections.delta.innerHTML = `
+      <div class="grid two">
+        <div class="panel">
+          <h2>Budget Category Comparison</h2>
+          <div class="chart-box tall"><canvas id="budgetDeltaChart"></canvas></div>
+        </div>
+        <div class="panel">
+          <h2>Year-over-Year Changes</h2>
+          ${budgetComparison.map(row => `
+            <div class="variance" style="margin-bottom:12px">
+              <div style="display:flex;justify-content:space-between;gap:16px">
+                <strong>${row.category}</strong>
+                <span class="${row.change >= 0 ? 'orange' : 'blue'}">${pct(row.percent)}</span>
+              </div>
+              <p class="note">${row.y2025 ? money(row.y2025) : '-'} to ${money(row.y2026)}: ${signed(row)}</p>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      <div class="grid two">
+        <div class="panel">
+          <h2>Department Budget Changes</h2>
+          <div class="chart-box"><canvas id="departmentDeltaChart"></canvas></div>
+        </div>
+        <div class="panel">
+          <h2>Revenue Source Changes</h2>
+          <div class="chart-box"><canvas id="revenueDeltaChart"></canvas></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Key Variances & Alerts</h2>
+        <div class="grid cards">
+          ${keyVariances.map(row => `
+            <article class="variance">
+              <h3>${row.item}</h3>
+              <div class="${row.severity}"><strong>${signed(row)}</strong></div>
+              <div class="kv">
+                <div><span class="label">2025</span><br><strong>${money(row.y2025)}</strong></div>
+                <div><span class="label">2026</span><br><strong>${money(row.y2026)}</strong></div>
+                <div><span class="label">Change</span><br><strong>${money(row.change)}</strong></div>
+              </div>
+              <p class="note">${row.note}</p>
+            </article>
+          `).join('')}
+        </div>
+      </div>
+      <div class="alert blue">
+        <strong>2025 to 2026 Analysis Summary</strong>
+        <p class="note">Overall budget growth is +2.44%. Core operations declined -2.63% within CAP, while excluded operations increased +90.58%, driven primarily by grant-backed activity. Debt service declined -10.23%, while workers compensation remains the largest flagged increase.</p>
+      </div>
+    `;
+
+    sections.taxImpact.innerHTML = `
+      <div class="alert blue">
+        <h2>Your Property Tax Impact</h2>
+        <p>Use Balcony to find your Orange property record, copy the assessment page value labeled <strong>Total Assessed Value</strong>, then paste it below. The calculator estimates the municipal-budget impact from the 2026 tax levy and shows a projected full-bill rate using Orange's 2025 certified tax-rate baseline.</p>
+      </div>
+      <div class="grid two">
+        <div class="panel">
+          <h2 class="panel-title">${icon('search', 'icon blue')} Find Your Property</h2>
+          <p class="note">Open Balcony, search by owner, address, block/lot, or qualifier, then copy the <strong>Total Assessed Value</strong> from the assessment page.</p>
+          <p style="margin:18px 0">
+            <a href="${taxImpactAssumptions.balconyUrl}" target="_blank" rel="noopener" class="badge blue" style="text-decoration:none">Open Balcony NJ-0717</a>
+          </p>
+          <label class="label" for="assessedValueInput">Total Assessed Value</label>
+          <input id="assessedValueInput" inputmode="decimal" placeholder="Example: 350,000" style="width:100%;margin-top:8px;padding:13px 14px;border:1px solid var(--line);border-radius:8px;font-size:1.05rem" />
+          <div class="grid two" style="margin-top:14px">
+            <button id="sampleHome350" class="calc-button" type="button">Use $350K</button>
+            <button id="sampleHome500" class="calc-button" type="button">Use $500K</button>
+          </div>
+          <p class="note" style="margin-top:14px">This estimates the municipal levy change. Final bills also depend on county, school, library/open-space, collection reserve, appeals, exemptions, and the certified county tax rate.</p>
+        </div>
+        <div class="panel">
+          <h2 class="panel-title">${icon('calculator', 'icon orange')} Estimated Result</h2>
+          <div class="grid metrics" style="grid-template-columns:1fr 1fr">
+            <article class="metric" style="box-shadow:none">
+              <span class="label">2025 Est. Bill</span>
+              <div class="value" id="taxBill2025">$0</div>
+              <p class="note">Using 2025 general rate</p>
+            </article>
+            <article class="metric" style="box-shadow:none">
+              <span class="label">2026 Est. Bill</span>
+              <div class="value" id="taxBill2026">$0</div>
+              <p class="note">2025 baseline plus municipal levy change</p>
+            </article>
+            <article class="metric" style="box-shadow:none">
+              <span class="label">Estimated Increase</span>
+              <div class="value orange" id="taxBillChange">$0</div>
+              <p class="note" id="taxBillChangePct">0.00%</p>
+            </article>
+            <article class="metric" style="box-shadow:none">
+              <span class="label">Effective Tax Rate</span>
+              <div class="value blue" id="effectiveRateResult">0.000%</div>
+              <p class="note">Projected effective rate, not bill multiplier</p>
+            </article>
+          </div>
+        </div>
+      </div>
+      <div class="grid three">
+        <div class="alert yellow"><strong>2025 Certified General Rate</strong><p class="note">${taxImpactAssumptions.generalTaxRate2025.toFixed(3)} per $100 assessed value. NJ Division of Taxation identifies the general tax rate as the bill multiplier.</p></div>
+        <div class="alert blue"><strong>Estimated 2026 General Rate</strong><p class="note"><span id="projectedRateLabel">${taxImpactAssumptions.projectedGeneralTaxRate2026.toFixed(3)}</span> per $100 assessed value, assuming non-municipal rates stay flat.</p></div>
+        <div class="alert green"><strong>Municipal Levy Impact</strong><p class="note">Municipal levy rises from ${money(taxImpactAssumptions.municipalLevy2025)} to ${money(taxImpactAssumptions.municipalLevy2026)}: +${money(taxImpactAssumptions.municipalLevy2026 - taxImpactAssumptions.municipalLevy2025)} (+4.81%).</p></div>
+      </div>
+      <div class="panel">
+        <h2>How The Estimate Works</h2>
+        ${table(['Step', 'Formula / Source', 'Value'], [
+          `<tr><td>1</td><td>Find property's Total Assessed Value from Balcony</td><td id="formulaAssessment">$0</td></tr>`,
+          `<tr><td>2</td><td>2025 bill estimate = assessed value x 2025 general rate / 100</td><td>${taxImpactAssumptions.generalTaxRate2025.toFixed(3)} per $100</td></tr>`,
+          `<tr><td>3</td><td>2026 municipal rate change = levy increase / estimated taxable base x 100</td><td>+${taxImpactAssumptions.municipalRateChange.toFixed(3)} per $100</td></tr>`,
+          `<tr><td>4</td><td>2026 bill estimate = assessed value x projected 2026 general rate / 100</td><td>${taxImpactAssumptions.projectedGeneralTaxRate2026.toFixed(3)} per $100</td></tr>`,
+          `<tr><td>5</td><td>Projected effective tax rate = projected general rate x 2025 effective/general ratio</td><td>${taxImpactAssumptions.projectedEffectiveTaxRate2026.toFixed(3)}%</td></tr>`
+        ])}
+        <p class="note" style="margin-top:12px">Sources used in this estimator: Balcony property lookup for homeowner assessed value; City budget levy figures from this dashboard's 2025/2026 budget dataset; NJ Division of Taxation 2025 Orange City Township general tax rate 4.030 and effective tax rate 3.765. The NJ Division explains that the general tax rate is expressed per $100 of assessed value and is used to compute the bill; the effective tax rate is for comparison and is not the bill multiplier.</p>
+      </div>
+    `;
+
+    const pilotTotals = { y2025: 2664627, y2026: 2788300 };
+    sections.pilot.innerHTML = `
+      <div class="alert yellow">
+        <h2>PILOT Program Overview</h2>
+        <p>Payment-in-Lieu-of-Taxes agreements are negotiated payments from property owners in place of traditional property taxes. The 2026 program remains a meaningful revenue source, but the portfolio shows aging and phase-out risk.</p>
+      </div>
+      <div class="grid metrics">
+        ${metric({ label: 'Total PILOT Revenue', value: money(pilotTotals.y2026), note: '2026 projected PILOT revenue', yoy: `+${money(pilotTotals.y2026 - pilotTotals.y2025)} (+4.64%) from 2025`, iconName: 'landmark', color: 'yellow' })}
+        ${metric({ label: 'Active Agreements', value: '27', note: 'Properties with PILOT agreements', yoy: 'Diversified but aging portfolio', iconName: 'building-2', color: 'blue' })}
+        ${metric({ label: '% of City Revenue', value: '9.0%', note: 'Down from 11.3% in 2025', yoy: 'Share declined due to grant growth', iconName: 'pie-chart', color: 'red' })}
+        ${metric({ label: '2027 Forecast Risk', value: '-10-15%', note: 'Without new agreements', yoy: `${money(280000)}-${money(418000)} potential decline`, iconName: 'alert-triangle', color: 'orange' })}
+      </div>
+      <div class="grid two">
+        <div class="panel">
+          <h2>Top 5 PILOT Properties</h2>
+          ${[...pilotProperties].filter(p => p.y2026 > 0).sort((a,b) => b.y2026 - a.y2026).slice(0,5).map(p => `
+            <div class="variance" style="margin-bottom:12px">
+              <div style="display:flex;justify-content:space-between;gap:12px">
+                <div><strong>${p.name}</strong><p class="note">${p.type}</p></div>
+                <span class="badge ${p.percent >= 0 ? 'green' : 'red'}">${pct(p.percent)}</span>
+              </div>
+              <strong>${money(p.y2026)}</strong>
+            </div>
+          `).join('')}
+        </div>
+        <div class="panel">
+          <h2>PILOT Revenue Risks</h2>
+          <div class="chart-box"><canvas id="pilotRiskChart"></canvas></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>PILOT Properties: 2025 vs 2026 Detailed Comparison</h2>
+        ${table(['Property', '2025', '2026', 'Change', '% Change', 'Status'], pilotProperties.map(p => `
+          <tr>
+            <td><strong>${p.name}</strong><br><span class="note">${p.type}</span></td>
+            <td>${money(p.y2025)}</td>
+            <td>${money(p.y2026)}</td>
+            <td class="${p.change >= 0 ? 'green' : 'red'}">${p.change >= 0 ? '+' : ''}${money(p.change)}</td>
+            <td class="${p.change >= 0 ? 'green' : 'red'}">${pct(p.percent)}</td>
+            <td><span class="badge ${p.status === 'Growing' ? 'green' : p.status === 'Stable' ? 'blue' : p.status === 'Declining' ? 'orange' : 'red'}">${p.status}</span></td>
+          </tr>
+        `))}
+      </div>
+      <div class="grid two">
+        <div class="alert red"><strong>Critical Concerns</strong><p class="note">Tony Galento declined -91.53%, L & M Development declined -53.65%, and 4 properties have phased out. The portfolio needs active recruitment and renegotiation strategy.</p></div>
+        <div class="alert green"><strong>Positive Developments</strong><p class="note">Total PILOT revenue still grows +4.64%, with 27 agreements and growing properties including Harvard Printing, 606 Freeman, Essex & Crane, and The Berkley.</p></div>
+      </div>
+    `;
+
+    sections.capital.innerHTML = `
+      <div class="alert blue"><strong>6-Year Capital Plan</strong><p class="note">Total six-year capital expenditure is ${money(16227000)} across 11 projects, with the largest 2026 focus on water and sewer modernization.</p></div>
+      <div class="grid cards">
+        ${capitalProjects.map(p => `
+          <article class="project">
+            <div style="display:flex;justify-content:space-between;align-items:start;gap:12px">
+              <h3>${p.name}</h3>
+              <span class="badge ${p.status === 'Priority' ? 'red' : p.status === 'Active' ? 'green' : 'yellow'}">${p.status}</span>
+            </div>
+            <p class="note">${p.description}</p>
+            <div class="kv">
+              <div><span class="label">Total Cost</span><br><strong>${money(p.total)}</strong></div>
+              <div><span class="label">2026 Budget</span><br><strong>${money(p.budget2026)}</strong></div>
+              <div><span class="label">Category</span><br><strong>${p.category}</strong></div>
+            </div>
+            <div style="margin-top:14px">
+              <div class="bar-track"><div class="bar-fill" style="width:${Math.min(100, (p.budget2026 / p.total) * 100)}%"></div></div>
+              <p class="note">${((p.budget2026 / p.total) * 100).toFixed(1)}% of total project cost allocated in 2026. Timeline: ${p.years} year${p.years > 1 ? 's' : ''}.</p>
+            </div>
+          </article>
+        `).join('')}
+      </div>
+      <div class="panel">
+        <h2>2026 Capital Allocation</h2>
+        <div class="chart-box"><canvas id="capitalChart"></canvas></div>
+      </div>
+    `;
+
+    sections.spending.innerHTML = `
+      <div class="grid two">
+        <div class="panel">
+          <h2>Municipal Department Spending</h2>
+          <div class="chart-box tall"><canvas id="spendingChart"></canvas></div>
+        </div>
+        <div class="panel">
+          <h2>Spending by Department</h2>
+          ${departmentSpending.map(d => `
+            <div class="variance" style="margin-bottom:12px;display:flex;justify-content:space-between;gap:12px">
+              <strong>${d.name}</strong>
+              <div style="text-align:right"><strong>${money(d.amount)}</strong><p class="note">${d.percentage}%</p></div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      <div class="grid three">
+        <div class="alert yellow"><strong>Largest Allocation</strong><p class="note">Insurance: ${money(23857280)} (30.4%).</p></div>
+        <div class="alert blue"><strong>Public Safety Combined</strong><p class="note">Police + Fire: ${money(28006353)} (35.2%).</p></div>
+        <div class="alert green"><strong>Infrastructure & Services</strong><p class="note">Public Works + Administration: ${money(14036684)} (17.8%).</p></div>
+      </div>
+    `;
+
+    sections.forecast.innerHTML = `
+      <div class="panel">
+        <h2>6-Year Capital Budget Forecast (2026-2031)</h2>
+        <div class="chart-box tall"><canvas id="forecastChart"></canvas></div>
+      </div>
+      <div class="grid two">
+        <div class="panel">
+          <h2>Yearly Capital Allocation</h2>
+          ${table(['Year', 'General', 'Water/Sewer', 'Total'], sixYearProjection.map(y => `
+            <tr><td><strong>${y.year}</strong></td><td>${money(y.general)}</td><td>${money(y.waterSewer)}</td><td><strong>${money(y.total)}</strong></td></tr>
+          `))}
+        </div>
+        <div class="panel">
+          <h2>6-Year Summary</h2>
+          <div class="grid">
+            <div class="alert blue"><strong>Total 6-Year Investment</strong><p class="note">${money(16227000)}</p></div>
+            <div class="alert blue"><strong>General Capital</strong><p class="note">${money(9327000)} (57.4%)</p></div>
+            <div class="alert yellow"><strong>Water/Sewer Capital</strong><p class="note">${money(6900000)} (42.6%)</p></div>
+            <div class="alert green"><strong>Peak Investment Year</strong><p class="note">2026: ${money(9727000)}</p></div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    sections.changes.innerHTML = `
+      <div class="alert red"><strong>Change Order Tracking</strong><p class="note">Three change orders approved in 2025 exceeded the 20% threshold and were reported to NJDEP.</p></div>
+      <div class="grid cards">
+        ${changeOrders.map(order => `
+          <article class="project">
+            <h3>${order.project}</h3>
+            <p class="note">Contractor: ${order.contractor}</p>
+            <div class="kv">
+              <div><span class="label">Original Contract</span><br><strong>${money(order.original)}</strong></div>
+              <div><span class="label">Change Order</span><br><strong class="orange">${money(order.increase)}</strong></div>
+              <div><span class="label">Increase</span><br><strong class="red">${order.percentage}%</strong></div>
+            </div>
+            <div class="alert blue" style="margin-top:14px"><strong>Scope</strong><p class="note">${order.scope}</p></div>
+          </article>
+        `).join('')}
+      </div>
+    `;
+
+    const charts = {};
+    const chartDefaults = {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 900, easing: 'easeOutQuart' },
+      plugins: { legend: { position: 'bottom' } },
+      scales: { y: { ticks: { callback: v => shortMoney(v) } } }
+    };
+
+    function makeCharts() {
+      charts.revenuePie = new Chart(document.getElementById('revenuePie'), {
+        type: 'pie',
+        data: { labels: revenueSources.map(r => r.name), datasets: [{ data: revenueSources.map(r => r.value), backgroundColor: revenueSources.map(r => r.color) }] },
+        options: { responsive: true, maintainAspectRatio: false, animation: { animateRotate: true, duration: 900 }, plugins: { legend: { position: 'bottom' } } }
+      });
+      charts.historicalTrend = new Chart(document.getElementById('historicalTrend'), {
+        type: 'line',
+        data: {
+          labels: historicalTrend.map(r => r.year),
+          datasets: [
+            { label: 'Total Budget', data: historicalTrend.map(r => r.total), borderColor: '#005fa3', backgroundColor: '#005fa3', tension: .32 },
+            { label: 'Tax Levy', data: historicalTrend.map(r => r.taxLevy), borderColor: '#f97316', backgroundColor: '#f97316', tension: .32 },
+            { label: 'Non-Tax Revenue', data: historicalTrend.map(r => r.nonTaxRevenue), borderColor: '#16a34a', backgroundColor: '#16a34a', tension: .32 },
+            { label: 'Debt Service', data: historicalTrend.map(r => r.debtService), borderColor: '#dc2626', backgroundColor: '#dc2626', tension: .32 }
+          ]
+        },
+        options: chartDefaults
+      });
+      charts.budgetDelta = new Chart(document.getElementById('budgetDeltaChart'), {
+        type: 'bar',
+        data: { labels: budgetComparison.map(r => r.category), datasets: [{ label: '2025', data: budgetComparison.map(r => r.y2025), backgroundColor: '#0078c4' }, { label: '2026', data: budgetComparison.map(r => r.y2026), backgroundColor: '#f97316' }] },
+        options: chartDefaults
+      });
+      charts.departmentDelta = new Chart(document.getElementById('departmentDeltaChart'), {
+        type: 'bar',
+        data: { labels: departmentComparison.map(r => r.name), datasets: [{ label: '2025', data: departmentComparison.map(r => r.y2025), backgroundColor: '#0078c4' }, { label: '2026', data: departmentComparison.map(r => r.y2026), backgroundColor: '#f97316' }] },
+        options: chartDefaults
+      });
+      charts.revenueDelta = new Chart(document.getElementById('revenueDeltaChart'), {
+        type: 'bar',
+        data: { labels: revenueComparison.map(r => r.source), datasets: [{ label: '2025', data: revenueComparison.map(r => r.y2025), backgroundColor: '#0078c4' }, { label: '2026', data: revenueComparison.map(r => r.y2026), backgroundColor: '#16a34a' }] },
+        options: chartDefaults
+      });
+      const pilotRiskRows = [...pilotProperties].sort((a,b) => a.change - b.change).slice(0,8);
+      charts.pilotRisk = new Chart(document.getElementById('pilotRiskChart'), {
+        type: 'bar',
+        data: { labels: pilotRiskRows.map(p => p.name), datasets: [{ label: 'Revenue Change', data: pilotRiskRows.map(p => p.change), backgroundColor: '#dc2626' }] },
+        options: chartDefaults
+      });
+      charts.capital = new Chart(document.getElementById('capitalChart'), {
+        type: 'bar',
+        data: { labels: capitalProjects.map(p => p.name), datasets: [{ label: '2026 Budget', data: capitalProjects.map(p => p.budget2026), backgroundColor: '#005fa3' }, { label: 'Total Cost', data: capitalProjects.map(p => p.total), backgroundColor: '#f97316' }] },
+        options: chartDefaults
+      });
+      charts.spending = new Chart(document.getElementById('spendingChart'), {
+        type: 'bar',
+        data: { labels: departmentSpending.map(d => d.name), datasets: [{ label: 'Amount', data: departmentSpending.map(d => d.amount), backgroundColor: '#0078c4' }] },
+        options: chartDefaults
+      });
+      charts.forecast = new Chart(document.getElementById('forecastChart'), {
+        type: 'line',
+        data: { labels: sixYearProjection.map(y => y.year), datasets: [{ label: 'General Capital', data: sixYearProjection.map(y => y.general), borderColor: '#005fa3', backgroundColor: '#005fa3', tension: .3 }, { label: 'Water/Sewer Capital', data: sixYearProjection.map(y => y.waterSewer), borderColor: '#f97316', backgroundColor: '#f97316', tension: .3 }] },
+        options: chartDefaults
+      });
+    }
+
+    function parseAssessedValue(raw) {
+      return Number(String(raw || '').replace(/[^0-9.]/g, '')) || 0;
+    }
+
+    function updateTaxImpact(rawValue) {
+      const assessedValue = parseAssessedValue(rawValue);
+      const bill2025 = assessedValue * taxImpactAssumptions.generalTaxRate2025 / 100;
+      const bill2026 = assessedValue * taxImpactAssumptions.projectedGeneralTaxRate2026 / 100;
+      const change = bill2026 - bill2025;
+      const changePct = bill2025 ? (change / bill2025) * 100 : 0;
+
+      document.getElementById('taxBill2025').textContent = money(bill2025);
+      document.getElementById('taxBill2026').textContent = money(bill2026);
+      document.getElementById('taxBillChange').textContent = `${change >= 0 ? '+' : ''}${money(change)}`;
+      document.getElementById('taxBillChangePct').textContent = `${change >= 0 ? '+' : ''}${changePct.toFixed(2)}% vs. estimated 2025 bill`;
+      document.getElementById('effectiveRateResult').textContent = `${taxImpactAssumptions.projectedEffectiveTaxRate2026.toFixed(3)}%`;
+      document.getElementById('formulaAssessment').textContent = money(assessedValue);
+    }
+
+    document.getElementById('assessedValueInput').addEventListener('input', event => updateTaxImpact(event.target.value));
+    document.getElementById('sampleHome350').addEventListener('click', () => {
+      document.getElementById('assessedValueInput').value = '350,000';
+      updateTaxImpact('350000');
+    });
+    document.getElementById('sampleHome500').addEventListener('click', () => {
+      document.getElementById('assessedValueInput').value = '500,000';
+      updateTaxImpact('500000');
+    });
+
+    document.querySelectorAll('.tab').forEach(button => {
+      button.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+        button.classList.add('active');
+        document.querySelectorAll('[data-section]').forEach(section => {
+          section.hidden = section.dataset.section !== button.dataset.tab;
+        });
+        requestAnimationFrame(() => Object.values(charts).forEach(chart => chart.resize()));
+      });
+    });
+
+    makeCharts();
+    updateTaxImpact(0);
+    if (window.lucide) lucide.createIcons();
+  </script>
+</body>
+</html>
