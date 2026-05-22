@@ -13,6 +13,21 @@
 - PILOT program data and analysis
 - Real-time financial metrics and visualizations
 
+### **WEBSITE MICRO WIDGET**
+**Files:** `orange-budget-widget.js`, `widget-demo.html`
+- Dependency-free web component for embedding a compact budget snapshot on another website
+- Highlights FY2026 budget, tax levy, PILOT revenue, grant revenue, and the top watch item
+- Includes direct links to the full dashboard and GitHub repository
+- Example embed:
+
+```html
+<script src="orange-budget-widget.js" defer></script>
+<orange-budget-widget
+  dashboard-url="https://jameshward3.github.io/OrangeBudgetDashboard/"
+  github-url="https://github.com/jameshward3/OrangeBudgetDashboard">
+</orange-budget-widget>
+```
+
 **Features:**
 - Overview: Key metrics with 2025 vs 2026 changes
 - 2025 vs 2026 Delta: Comprehensive year-over-year comparison
@@ -510,4 +525,3 @@ You now have a **comprehensive, production-ready budget analysis system** includ
 - Capital project management
 - Educational/BIM teaching
 - Community communications
-
