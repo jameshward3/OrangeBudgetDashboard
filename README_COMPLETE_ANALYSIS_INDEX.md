@@ -14,18 +14,19 @@
 - Real-time financial metrics and visualizations
 
 ### **WEBSITE MICRO WIDGET**
-**Files:** `orange-budget-widget.js`, `widget-demo.html`
-- Dependency-free web component for embedding a compact budget snapshot on another website
+**Files:** `micro-widget.html`, `widget-demo.html`
+- Squarespace-ready iframe widget for embedding a compact budget snapshot on another website
 - Highlights FY2026 budget, tax levy, PILOT revenue, grant revenue, and the top watch item
 - Includes direct links to the full dashboard and GitHub repository
 - Example embed:
 
 ```html
-<script src="orange-budget-widget.js" defer></script>
-<orange-budget-widget
-  dashboard-url="https://jameshward3.github.io/OrangeBudgetDashboard/"
-  github-url="https://github.com/jameshward3/OrangeBudgetDashboard">
-</orange-budget-widget>
+<iframe
+  src="https://jameshward3.github.io/OrangeBudgetDashboard/micro-widget.html?v=1"
+  title="Orange Budget Dashboard Summary"
+  style="width:100%; height:500px; border:0; overflow:show;"
+  loading="lazy">
+</iframe>
 ```
 
 **Features:**

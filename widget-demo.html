@@ -4,7 +4,6 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Orange Budget Widget Demo</title>
-  <script src="./orange-budget-widget.js" defer></script>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -60,22 +59,24 @@
 <body>
   <main>
     <h1>Orange Budget Micro Widget</h1>
-    <p>Embed this widget on a municipal website, project page, or article to surface the budget app's key FY2026 indicators with links back to the dashboard and source repository.</p>
+    <p>Embed this widget on a Squarespace website, municipal page, project page, or article to surface the budget app's key FY2026 indicators with links back to the dashboard and source repository.</p>
 
     <div class="demo-grid">
       <section class="embed" aria-label="Widget embed code">
-        <pre><code>&lt;script src="orange-budget-widget.js" defer&gt;&lt;/script&gt;
-&lt;orange-budget-widget
-  dashboard-url="https://jameshward3.github.io/OrangeBudgetDashboard/"
-  github-url="https://github.com/jameshward3/OrangeBudgetDashboard"&gt;
-&lt;/orange-budget-widget&gt;</code></pre>
+        <pre><code>&lt;iframe
+  src="https://jameshward3.github.io/OrangeBudgetDashboard/micro-widget.html?v=1"
+  title="Orange Budget Dashboard Summary"
+  style="width:100%; height:500px; border:0; overflow:show;"
+  loading="lazy"&gt;
+&lt;/iframe&gt;</code></pre>
       </section>
 
-      <orange-budget-widget
-        compact
-        dashboard-url="./index.html"
-        github-url="https://github.com/jameshward3/OrangeBudgetDashboard">
-      </orange-budget-widget>
+      <iframe
+        src="./micro-widget.html"
+        title="Orange Budget Dashboard Summary"
+        style="width:100%; height:500px; border:0; overflow:show;"
+        loading="lazy">
+      </iframe>
     </div>
   </main>
 </body>
